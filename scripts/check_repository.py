@@ -6,7 +6,20 @@ import subprocess
 from urllib.parse import unquote, urlsplit
 
 
-LINK = re.compile(r"!?\[[^\]]*\]\(([^)]+)\)")
+LINK = re.compile(r"!?\[[^\]]*\]\(([^)]*)\)")
+DEFINITION = re.compile(r"^ {0,3}\[([^\]]+)\]:\s*(<[^>]*>|\S+).*$", re.MULTILINE)
+REFERENCE = re.compile(r"!?\[([^\]]+)\]\[([^\]]*)\]")
+
+
+def destination(raw: str) -> str:
+    raw = raw.strip()
+    if raw.startswith("<"):
+        return raw[1:].partition(">")[0]
+    return raw.split()[0] if raw else ""
+
+
+def label(raw: str) -> str:
+    return " ".join(raw.split()).casefold()
 
 
 def broken_links(root: Path, files: list[Path]) -> list[str]:
@@ -15,8 +28,23 @@ def broken_links(root: Path, files: list[Path]) -> list[str]:
     for file in files:
         text = file.read_text(encoding="utf-8")
         text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+        definitions = {label(match.group(1)): destination(match.group(2))
+                       for match in DEFINITION.finditer(text)}
+        text = DEFINITION.sub("", text)
+        targets = []
         for match in LINK.finditer(text):
-            target = match.group(1).strip().split()[0].strip("<>")
+            targets.append(destination(match.group(1)))
+        text = LINK.sub("", text)
+        for match in REFERENCE.finditer(text):
+            reference = label(match.group(2) or match.group(1))
+            if reference in definitions:
+                targets.append(definitions[reference])
+        text = REFERENCE.sub("", text)
+        for match in re.finditer(r"!?\[([^\]]+)\]", text):
+            reference = label(match.group(1))
+            if reference in definitions:
+                targets.append(definitions[reference])
+        for target in targets:
             url = urlsplit(target)
             if url.scheme or url.netloc or not url.path:
                 continue
