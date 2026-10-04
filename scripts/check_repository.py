@@ -22,12 +22,33 @@ def label(raw: str) -> str:
     return " ".join(raw.split()).casefold()
 
 
+def without_code(text: str) -> str:
+    lines = []
+    fence = ""
+    for line in text.splitlines(keepends=True):
+        if fence:
+            closing = re.match(r"^ {0,3}([`~]+)[ \t]*$", line.rstrip("\r\n"))
+            if (closing and len(closing.group(1)) >= len(fence)
+                    and set(closing.group(1)) == {fence[0]}):
+                fence = ""
+            lines.append("\n")
+            continue
+        opening = re.match(r"^ {0,3}(`{3,}|~{3,})", line)
+        if opening:
+            fence = opening.group(1)
+            lines.append("\n")
+        else:
+            lines.append(line)
+    # Inline code delimiters must have matching lengths, including double ticks.
+    return re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", "".join(lines), flags=re.DOTALL)
+
+
 def broken_links(root: Path, files: list[Path]) -> list[str]:
     root = root.resolve()
     errors = []
     for file in files:
         text = file.read_text(encoding="utf-8")
-        text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+        text = without_code(text)
         definitions = {label(match.group(1)): destination(match.group(2))
                        for match in DEFINITION.finditer(text)}
         text = DEFINITION.sub("", text)
