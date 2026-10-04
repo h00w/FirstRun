@@ -6,6 +6,25 @@ from scripts.check_repository import broken_links
 
 
 class RepositoryLinksTest(unittest.TestCase):
+    def test_literal_links_in_inline_code_and_fences_are_ignored(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            page = root / "README.md"
+            page.write_text('`[inline](missing.md)`\n'
+                            '``[inline with ` character](missing.md)``\n'
+                            '~~~md\n[tilde](missing.md)\n~~~\n'
+                            '````md\n```\n[nested](missing.md)\n```\n````\n'
+                            '[real](absent.md)\n')
+            errors = broken_links(root, [page])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("absent.md", errors[0])
+
+    def test_code_markers_inside_a_paragraph_do_not_hide_real_links(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            page = root / "README.md"
+            page.write_text('Text ~~~ followed by [real](missing.md)\n')
+            self.assertEqual(len(broken_links(root, [page])), 1)
     def test_empty_links_and_angle_destinations_with_spaces(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
