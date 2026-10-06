@@ -40,7 +40,8 @@ def without_code(text: str) -> str:
         else:
             lines.append(line)
     # Inline code delimiters must have matching lengths, including double ticks.
-    return re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", "".join(lines), flags=re.DOTALL)
+    text = re.sub(r"(?<!`)(`+)(?!`)(.*?)(?<!`)\1(?!`)", "", "".join(lines), flags=re.DOTALL)
+    return re.sub(r"<!--.*?(?:-->|$)", "", text, flags=re.DOTALL)
 
 
 def broken_links(root: Path, files: list[Path]) -> list[str]:

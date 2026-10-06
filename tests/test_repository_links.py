@@ -6,6 +6,16 @@ from scripts.check_repository import broken_links
 
 
 class RepositoryLinksTest(unittest.TestCase):
+    def test_hidden_html_comments_do_not_create_links_or_definitions(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            page = root / "README.md"
+            page.write_text('<!-- [hidden](missing.md)\n[hidden-ref]: absent.md\n-->\n'
+                            '[hidden-ref] [visible](real-missing.md)\n')
+            errors = broken_links(root, [page])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("real-missing.md", errors[0])
+
     def test_literal_links_in_inline_code_and_fences_are_ignored(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
