@@ -35,6 +35,15 @@ class RepositoryLinksTest(unittest.TestCase):
             page = root / "README.md"
             page.write_text('Text ~~~ followed by [real](missing.md)\n')
             self.assertEqual(len(broken_links(root, [page])), 1)
+
+    def test_backslash_escaped_links_remain_literal_text(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            page = root / "README.md"
+            page.write_text(r"\[literal](missing.md) \![image](missing.png) [real](absent.md)")
+            errors = broken_links(root, [page])
+            self.assertEqual(len(errors), 1)
+            self.assertIn("absent.md", errors[0])
     def test_empty_links_and_angle_destinations_with_spaces(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
