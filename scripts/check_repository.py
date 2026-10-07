@@ -22,6 +22,13 @@ def label(raw: str) -> str:
     return " ".join(raw.split()).casefold()
 
 
+def escaped(text: str, index: int) -> bool:
+    backslashes = 0
+    while index > backslashes and text[index - backslashes - 1] == "\\":
+        backslashes += 1
+    return backslashes % 2 == 1
+
+
 def without_code(text: str) -> str:
     lines = []
     fence = ""
@@ -55,14 +62,19 @@ def broken_links(root: Path, files: list[Path]) -> list[str]:
         text = DEFINITION.sub("", text)
         targets = []
         for match in LINK.finditer(text):
-            targets.append(destination(match.group(1)))
+            if not escaped(text, match.start()):
+                targets.append(destination(match.group(1)))
         text = LINK.sub("", text)
         for match in REFERENCE.finditer(text):
+            if escaped(text, match.start()):
+                continue
             reference = label(match.group(2) or match.group(1))
             if reference in definitions:
                 targets.append(definitions[reference])
         text = REFERENCE.sub("", text)
         for match in re.finditer(r"!?\[([^\]]+)\]", text):
+            if escaped(text, match.start()):
+                continue
             reference = label(match.group(1))
             if reference in definitions:
                 targets.append(definitions[reference])
