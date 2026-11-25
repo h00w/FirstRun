@@ -57,8 +57,9 @@ def broken_links(root: Path, files: list[Path]) -> list[str]:
     for file in files:
         text = file.read_text(encoding="utf-8")
         text = without_code(text)
-        definitions = {label(match.group(1)): destination(match.group(2))
-                       for match in DEFINITION.finditer(text)}
+        definitions = {}
+        for match in DEFINITION.finditer(text):
+            definitions.setdefault(label(match.group(1)), destination(match.group(2)))
         text = DEFINITION.sub("", text)
         targets = []
         for match in LINK.finditer(text):
