@@ -52,6 +52,15 @@ class RepositoryLinksTest(unittest.TestCase):
             page.write_text('[self]() [blank](  ) [guide](<a b.md> "Title")')
             self.assertEqual(broken_links(root, [page]), [])
 
+    def test_first_reference_definition_wins(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            page = root / "README.md"
+            page.write_text("[first][Guide] and [second][Other]\n"
+                            "[Guide]: missing.md\n[guide]: README.md\n"
+                            "[Other]: README.md\n[OTHER]: unused.md\n")
+            self.assertEqual(broken_links(root, [page]), ["README.md: broken local link missing.md"])
+
     def test_reference_links_are_checked_when_used(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
